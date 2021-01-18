@@ -182,17 +182,6 @@ let webpackConfig = {
     }),
     new FriendlyErrorsWebpackPlugin(),
   ],
-  optimization: {
-    splitChunks: {
-      cacheGroups: {
-        vendor: {
-          test: /[\\/]node_modules[\\/]/,
-          name: 'vendors',
-          chunks: 'all',
-        },
-      },
-    },
-  },
 };
 
 /* eslint-disable global-require */ /** Let's only load dependencies as needed */
