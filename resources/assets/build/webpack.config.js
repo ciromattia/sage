@@ -102,24 +102,27 @@ let webpackConfig = {
       {
         test: /\.(ttf|otf|eot|woff2?|png|jpe?g|gif|svg|ico)$/,
         include: config.paths.assets,
-        type: 'asset/resource',
+        type: 'asset',
         parser: {
           dataUrlCondition: {
             maxSize: 4 * 1024, // 4kb
           },
         },
         generator: {
-          filename: `[path][name]${config.cacheBusting}.[ext]`,
+          filename: `[path]${assetsFilenames}[ext]`,
         },
       },
       {
         test: /\.(ttf|otf|eot|woff2?|png|jpe?g|gif|svg|ico)$/,
         include: /node_modules/,
-        loader: 'url-loader',
-        options: {
-          limit: 4096,
-          outputPath: 'vendor/',
-          name: `${config.cacheBusting}.[ext]`,
+        type: 'asset',
+        parser: {
+          dataUrlCondition: {
+            maxSize: 4 * 1024, // 4kb
+          },
+        },
+        generator: {
+          filename: `vendor/[path]${assetsFilenames}[ext]`,
         },
       },
     ],
