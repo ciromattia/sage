@@ -21,6 +21,8 @@
 @import "layouts/footer.css";
 @import "layouts/pages.css";
 @import "layouts/posts.css";
+@import "layouts/sidebar.css";
+@import "layouts/tinymce.css";
 
 /**
  * This injects all of Tailwind's utility classes, generated based on your

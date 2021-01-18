@@ -6,7 +6,7 @@ const {merge, mergeWithCustomize, customizeArray} = require('webpack-merge');
 const {CleanWebpackPlugin} = require('clean-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const StyleLintPlugin = require('stylelint-webpack-plugin');
-const CopyGlobsPlugin = require('copy-globs-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin');
 const ESLintPlugin = require('eslint-webpack-plugin');
 
@@ -143,16 +143,14 @@ let webpackConfig = {
       cleanOnceBeforeBuildPatterns: [config.paths.dist],
       verbose: false,
     }),
-    /**
-     * It would be nice to switch to copy-webpack-plugin, but
-     * unfortunately it doesn't provide a reliable way of
-     * tracking the before/after file names
-     */
-    // new CopyGlobsPlugin({
-    //   pattern: config.copy,
-    //   output: `[path]${assetsFilenames}.[ext]`,
-    //   manifest: config.manifest,
-    // }),
+    new CopyPlugin({
+      patterns: [
+        {
+          from: config.copy,
+          to: `[path]/${assetsFilenames}.[ext]`,
+        },
+      ],
+    }),
     new webpack.ProvidePlugin({
       $: 'jquery',
       jQuery: 'jquery',
@@ -195,9 +193,7 @@ if (config.enabled.cacheBusting) {
   webpackConfig.plugins.push(
     new WebpackAssetsManifest({
       output: 'assets.json',
-      space: 2,
       writeToDisk: false,
-      assets: config.manifest,
       customize(entry) {
         const sourcePath = path.basename(path.dirname(entry.key));
         const targetPath = path.basename(path.dirname(entry.value));
