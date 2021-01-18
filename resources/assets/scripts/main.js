@@ -1,5 +1,5 @@
 // import external dependencies
-import 'jquery';
+//import 'jquery';
 
 // Import everything from autoload
 import './autoload/**/*'

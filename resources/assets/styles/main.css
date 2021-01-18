@@ -1,0 +1,29 @@
+/**
+ * This injects Tailwind's base styles, which is a combination of
+ * Normalize.css and some additional base styles.
+ */
+@import "tailwindcss/base";
+
+/** Import variables */
+@import "common/variables.css";
+
+/**
+ * This injects any component classes registered by Tailwind plugins.
+ */
+@import "tailwindcss/components";
+
+/** Import theme styles */
+@import "components/buttons.css";
+@import "components/comments.css";
+@import "components/forms.css";
+@import "components/wp-classes.css";
+@import "layouts/header.css";
+@import "layouts/footer.css";
+@import "layouts/pages.css";
+@import "layouts/posts.css";
+
+/**
+ * This injects all of Tailwind's utility classes, generated based on your
+ * config file.
+ */
+@import "tailwindcss/utilities";

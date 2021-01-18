@@ -1,10 +1,63 @@
 'use strict'; // eslint-disable-line
 
-const { default: ImageminPlugin } = require('imagemin-webpack-plugin');
+const {default: ImageminPlugin} = require('imagemin-webpack-plugin');
 const imageminMozjpeg = require('imagemin-mozjpeg');
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
+const glob = require('glob-all');
+const PurgecssPlugin = require('purgecss-webpack-plugin');
 
 const config = require('./config');
+
+function collectSafelist() {
+  return {
+    standard: [
+      /* WP classes */
+      'rtl',
+      'home',
+      'blog',
+      'archive',
+      'date',
+      'error404',
+      'logged-in',
+      'admin-bar',
+      'no-customize-support',
+      'custom-background',
+      'wp-custom-logo',
+      'alignnone',
+      'alignright',
+      'alignleft',
+      'wp-caption',
+      'wp-caption-text',
+      'screen-reader-text',
+      'comment-list',
+      'wp-social-link',
+      /^search(-.*)?$/,
+      /^(.*)-template(-.*)?$/,
+      /^(.*)?-?single(-.*)?$/,
+      /^postid-(.*)?$/,
+      /^attachmentid-(.*)?$/,
+      /^attachment(-.*)?$/,
+      /^page(-.*)?$/,
+      /^(post-type-)?archive(-.*)?$/,
+      /^author(-.*)?$/,
+      /^category(-.*)?$/,
+      /^tag(-.*)?$/,
+      /^tax-(.*)?$/,
+      /^term-(.*)?$/,
+      /^(.*)?-?paged(-.*)?$/,
+      /^wp-block-(.*)?$/,
+      /^has-(.*)?$/,
+      /^is-(.*)?$/,
+      /^wp-embed-(.*)?$/,
+      /^blocks-gallery-(.*)?$/,
+      /* Swiper classes */
+      /^swiper-/,
+      /* Our classes */
+      'scrolled-down',
+      'show-nav',
+    ],
+  }
+}
 
 module.exports = {
   plugins: [
@@ -22,14 +75,23 @@ module.exports = {
       plugins: [imageminMozjpeg({ quality: 75 })],
       disable: (config.enabled.watcher),
     }),
-    new UglifyJsPlugin({
-      uglifyOptions: {
-        ecma: 5,
-        compress: {
-          warnings: true,
-          drop_console: true,
-        },
-      },
-    }),
+    // uncomment this block to use PurgeCSS webpack plugin
+    /* new PurgecssPlugin({
+      paths: glob.sync([
+        'app/!**!/!*.php',
+        'resources/views/!**!/!*.php',
+        'resources/assets/scripts/!**!/!*.js',
+      ]),
+      defaultExtractor: content => content.match(/[A-Za-z0-9-_:\/]+/g) || [],
+      safelist: collectSafelist,
+    }),*/
   ],
+  optimization: {
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        extractComments: false,
+      }),
+    ],
+  },
 };

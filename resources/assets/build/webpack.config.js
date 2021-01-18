@@ -1,12 +1,14 @@
 'use strict'; // eslint-disable-line
 
+const path = require('path');
 const webpack = require('webpack');
-const merge = require('webpack-merge');
-const CleanPlugin = require('clean-webpack-plugin');
-const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const {merge, mergeWithCustomize, customizeArray} = require('webpack-merge');
+const {CleanWebpackPlugin} = require('clean-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const StyleLintPlugin = require('stylelint-webpack-plugin');
 const CopyGlobsPlugin = require('copy-globs-webpack-plugin');
 const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin');
+const ESLintPlugin = require('eslint-webpack-plugin');
 
 const desire = require('./util/desire');
 const config = require('./config');
@@ -16,7 +18,7 @@ const assetsFilenames = (config.enabled.cacheBusting) ? config.cacheBusting : '[
 let webpackConfig = {
   context: config.paths.assets,
   entry: config.entry,
-  devtool: (config.enabled.sourceMaps ? '#source-map' : undefined),
+  devtool: (config.enabled.sourceMaps ? 'source-map' : undefined),
   output: {
     path: config.paths.dist,
     publicPath: config.publicPath,
@@ -36,14 +38,12 @@ let webpackConfig = {
     source: false,
     publicPath: false,
   },
+  performance: {
+    maxEntrypointSize: 512000,
+    maxAssetSize: 512000,
+  },
   module: {
     rules: [
-      {
-        enforce: 'pre',
-        test: /\.js$/,
-        include: config.paths.assets,
-        use: 'eslint',
-      },
       {
         enforce: 'pre',
         test: /\.(js|s?[ca]ss)$/,
@@ -54,64 +54,68 @@ let webpackConfig = {
         test: /\.js$/,
         exclude: [/node_modules(?![/|\\](bootstrap|foundation-sites))/],
         use: [
-          { loader: 'cache' },
-          { loader: 'buble', options: { objectAssign: 'Object.assign' } },
+          {loader: 'buble-loader', options: {objectAssign: 'Object.assign'}},
         ],
       },
       {
         test: /\.css$/,
         include: config.paths.assets,
-        use: ExtractTextPlugin.extract({
-          fallback: 'style',
-          use: [
-            { loader: 'cache' },
-            { loader: 'css', options: { sourceMap: config.enabled.sourceMaps } },
-            {
-              loader: 'postcss', options: {
-                postcssOptions: { path: __dirname, ctx: config },
-                sourceMap: config.enabled.sourceMaps,
+        use: [
+          MiniCssExtractPlugin.loader,
+          {loader: 'css-loader', options: {sourceMap: config.enabled.sourceMaps}},
+          {
+            loader: 'postcss-loader', options: {
+              postcssOptions: {
+                config: path.join(__dirname, 'postcss.config.js'),
+                ctx: config,
               },
+              sourceMap: config.enabled.sourceMaps,
             },
-          ],
-        }),
+          },
+        ],
       },
       {
         test: /\.scss$/,
-        include: config.paths.assets,
-        use: ExtractTextPlugin.extract({
-          fallback: 'style',
-          use: [
-            { loader: 'cache' },
-            { loader: 'css', options: { sourceMap: config.enabled.sourceMaps } },
-            {
-              loader: 'postcss', options: {
-                postcssOptions: { path: __dirname, ctx: config },
-                sourceMap: config.enabled.sourceMaps,
+        use: [
+          MiniCssExtractPlugin.loader,
+          {loader: 'css-loader', options: {sourceMap: config.enabled.sourceMaps}},
+          {
+            loader: 'postcss-loader', options: {
+              postcssOptions: {
+                config: path.join(__dirname, 'postcss.config.js'),
+                ctx: config,
               },
+              sourceMap: config.enabled.sourceMaps,
             },
-            { loader: 'resolve-url', options: { sourceMap: config.enabled.sourceMaps } },
-            {
-              loader: 'sass', options: {
-                sourceMap: config.enabled.sourceMaps,
+          },
+          {loader: 'resolve-url-loader', options: {sourceMap: config.enabled.sourceMaps}},
+          {
+            loader: 'sass-loader', options: {
+              sassOptions: {
                 sourceComments: true,
               },
+              sourceMap: true, //config.enabled.sourceMaps, // false causes a resolve issue
             },
-          ],
-        }),
+          },
+        ],
       },
       {
         test: /\.(ttf|otf|eot|woff2?|png|jpe?g|gif|svg|ico)$/,
         include: config.paths.assets,
-        loader: 'url',
-        options: {
-          limit: 4096,
-          name: `[path]${assetsFilenames}.[ext]`,
+        type: 'asset/resource',
+        parser: {
+          dataUrlCondition: {
+            maxSize: 4 * 1024, // 4kb
+          },
+        },
+        generator: {
+          filename: `[path][name]${config.cacheBusting}.[ext]`,
         },
       },
       {
         test: /\.(ttf|otf|eot|woff2?|png|jpe?g|gif|svg|ico)$/,
         include: /node_modules/,
-        loader: 'url',
+        loader: 'url-loader',
         options: {
           limit: 4096,
           outputPath: 'vendor/',
@@ -127,15 +131,16 @@ let webpackConfig = {
     ],
     enforceExtension: false,
   },
-  resolveLoader: {
-    moduleExtensions: ['-loader'],
-  },
   externals: {
     jquery: 'jQuery',
   },
   plugins: [
-    new CleanPlugin([config.paths.dist], {
-      root: config.paths.root,
+    new ESLintPlugin({
+      failOnWarning: false,
+      failOnError: true,
+    }),
+    new CleanWebpackPlugin({
+      cleanOnceBeforeBuildPatterns: [config.paths.dist],
       verbose: false,
     }),
     /**
@@ -143,16 +148,11 @@ let webpackConfig = {
      * unfortunately it doesn't provide a reliable way of
      * tracking the before/after file names
      */
-    new CopyGlobsPlugin({
-      pattern: config.copy,
-      output: `[path]${assetsFilenames}.[ext]`,
-      manifest: config.manifest,
-    }),
-    new ExtractTextPlugin({
-      filename: `styles/${assetsFilenames}.css`,
-      allChunks: true,
-      disable: (config.enabled.watcher),
-    }),
+    // new CopyGlobsPlugin({
+    //   pattern: config.copy,
+    //   output: `[path]${assetsFilenames}.[ext]`,
+    //   manifest: config.manifest,
+    // }),
     new webpack.ProvidePlugin({
       $: 'jquery',
       jQuery: 'jquery',
@@ -171,11 +171,9 @@ let webpackConfig = {
         context: config.paths.assets,
       },
     }),
-    new webpack.LoaderOptionsPlugin({
-      test: /\.js$/,
-      options: {
-        eslint: { failOnWarning: false, failOnError: true },
-      },
+    new MiniCssExtractPlugin({
+      filename: config.mode === 'production' ? 'styles/[name].[contenthash].css' : 'styles/[name].css',
+      chunkFilename: config.mode === 'production' ? 'styles/[id].[contenthash].css' : 'styles/[id].css',
     }),
     new StyleLintPlugin({
       failOnError: !config.enabled.watcher,
@@ -191,10 +189,6 @@ if (config.enabled.optimize) {
   webpackConfig = merge(webpackConfig, require('./webpack.config.optimize'));
 }
 
-if (config.env.production) {
-  webpackConfig.plugins.push(new webpack.NoEmitOnErrorsPlugin());
-}
-
 if (config.enabled.cacheBusting) {
   const WebpackAssetsManifest = require('webpack-assets-manifest');
 
@@ -204,7 +198,15 @@ if (config.enabled.cacheBusting) {
       space: 2,
       writeToDisk: false,
       assets: config.manifest,
-      replacer: require('./util/assetManifestsFormatter'),
+      customize(entry) {
+        const sourcePath = path.basename(path.dirname(entry.key));
+        const targetPath = path.basename(path.dirname(entry.value));
+        const newkey = sourcePath === targetPath ? entry.key : `${targetPath}/${entry.key}`;
+        return {
+          key: newkey,
+          value: entry.value,
+        };
+      },
     })
   );
 }
@@ -223,6 +225,9 @@ if (config.enabled.watcher) {
  * file, as there are limitations to using webpack-merge which can hinder your
  * ability to change certain options.
  */
-module.exports = merge.smartStrategy({
-  'module.loaders': 'replace',
-})(webpackConfig, desire(`${__dirname}/webpack.config.preset`));
+
+module.exports = mergeWithCustomize({
+  customizeArray: customizeArray({
+    'module.rules': 'replace',
+  }),
+})(webpackConfig, desire(`${__dirname}/webpack.config.preset`) ? desire(`${__dirname}/webpack.config.preset`) : {})
